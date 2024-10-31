@@ -21,8 +21,8 @@ console.log("Logs from your program will appear here!");
         break;
       default:
         console.error('unknown command', command);
+        break;
       }
-    connection.end();
   })
  });
 
