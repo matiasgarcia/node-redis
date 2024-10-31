@@ -1,8 +1,10 @@
 import net from 'net';
 import * as Utils from './utils.js';
+import * as Database from './database.js';
+import * as Encoder from './encoder.js';
 
-let rdbFileDir = undefined;
-let dbFileName = undefined;
+let rdbFileDir;
+let dbFileName;
 
 function init() {
   const args = process.argv.slice(2, process.argv.length);
@@ -25,32 +27,6 @@ function init() {
 
 init();
 
-function encodeValue(value) {
-  if(value === undefined || value === null) {
-    return `$-1\r\n`
-  }
-  if(Array.isArray(value)) {
-    return `*${value.length}\r\n${value.map(v => encodeValue(v)).join('')}`
-  }
-  return `$${value.length}\r\n${value}\r\n`;
-}
-
-const map = {};
-
-function set(key, value, opts = {}) {
-  const { expiresInMilliseconds } = opts;
-  map[key] = { value, expiresAt: expiresInMilliseconds ? new Date(new Date().getTime() + expiresInMilliseconds) : undefined }
-}
-
-function get(key) {
-  if(map[key] === undefined) return undefined;
-
-  const { value, expiresAt } = map[key];
-  if(!expiresAt) return value;
-  if(new Date() > expiresAt) return undefined;
-  return value;
-}
-
 // https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
 const server = net.createServer((connection) => {
   connection.on('data', (stream) => {
@@ -65,7 +41,7 @@ const server = net.createServer((connection) => {
         break;
       case 'ECHO': {
         const arg1 = tokens[4];
-        connection.write(encodeValue(arg1));
+        connection.write(Encoder.encodeValue(arg1));
         break;
       }
       case 'SET': {
@@ -74,14 +50,14 @@ const server = net.createServer((connection) => {
         const opts = tokens[8] ?? '';
         const expirationTime = tokens[10];
         const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
-        set(key, value, options)
+        Database.set(key, value, options)
         connection.write(`+OK\r\n`);
         break;
       }
       case 'GET': {
         const key = tokens[4];
-        const value = get(key);
-        connection.write(encodeValue(value))
+        const value = Database.get(key);
+        connection.write(Encoder.encodeValue(value))
         break;
       }
       case 'CONFIG': {
@@ -89,10 +65,9 @@ const server = net.createServer((connection) => {
         if(command !== "GET") return;
         const valueToGet = tokens[6];
         if(valueToGet === 'dir') {
-          console.log(encodeValue(['dir', rdbFileDir]));
-          connection.write(encodeValue(['dir', rdbFileDir]));
+          connection.write(Encoder.encodeValue(['dir', rdbFileDir]));
         } else if(valueToGet === 'dbfilename') {
-          connection.write(encodeValue(['dbfilename', dbFileName]));
+          connection.write(Encoder.encodeValue(['dbfilename', dbFileName]));
         }
         break;
       }
