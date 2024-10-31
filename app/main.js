@@ -19,7 +19,7 @@ const server = net.createServer((connection) => {
       return;
     }
     const command = tokens[2];
-    switch (command) {
+    switch (command.toUpperCase()) {
       case 'PING': 
         connection.write(`+PONG\r\n`);
         break;
