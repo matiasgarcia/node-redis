@@ -10,11 +10,25 @@ function encodeValue(value) {
 }
 
 const map = {};
+
+function set(key, value, opts = {}) {
+  const { expiresInMilliseconds } = opts;
+  map[key] = { value, expiresAt: expiresInMilliseconds ? new Date(new Date().getTime() + expiresInMilliseconds) : undefined }
+}
+
+function get(key) {
+  if(map[key] === undefined) return undefined;
+
+  const { value, expiresAt } = map[key];
+  if(!expiresAt) return value;
+  if(new Date() > expiresAt) return undefined;
+  return value;
+}
+
 // https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
 const server = net.createServer((connection) => {
   connection.on('data', (stream) => {
     const tokens = stream.toString().split('\r\n');
-    console.debug(tokens);
     if (tokens.length === 0) {
       return;
     }
@@ -31,13 +45,16 @@ const server = net.createServer((connection) => {
       case 'SET': {
         const key = tokens[4];
         const value = tokens[6];
-        map[key] = value;
+        const opts = tokens[8] ?? '';
+        const expirationTime = tokens[10];
+        const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
+        set(key, value, options)
         connection.write(`+OK\r\n`);
         break;
       }
       case 'GET': {
         const key = tokens[4];
-        const value = map[key];
+        const value = get(key);
         connection.write(encodeValue(value))
         break;
       }
