@@ -2,30 +2,9 @@ import net from 'net';
 import * as Utils from './utils.js';
 import * as Database from './database.js';
 import * as Encoder from './encoder.js';
+import * as Config from './config.js';
 
-let rdbFileDir;
-let dbFileName;
-
-function init() {
-  const args = process.argv.slice(2, process.argv.length);
-  if(!args.length) return;
-  Utils.groupIntoPairs(args).forEach(([arg, value]) => {
-    const parsedArg = arg.replace('--', '');
-    if(!value) throw new Error(`Missing arg for: ${arg}`);
-    switch(parsedArg) {
-      case 'dir':
-        rdbFileDir = value;
-        break;
-      case 'dbfilename':
-        dbFileName = value;
-        break;
-      default:
-        throw new Error(`Unknown arg: ${arg}`)
-    }
-  })
-}
-
-init();
+Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 
 // https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
 const server = net.createServer((connection) => {
@@ -65,9 +44,9 @@ const server = net.createServer((connection) => {
         if(command !== "GET") return;
         const valueToGet = tokens[6];
         if(valueToGet === 'dir') {
-          connection.write(Encoder.encodeValue(['dir', rdbFileDir]));
+          connection.write(Encoder.encodeValue(['dir', Config.get().rdbFileDir]));
         } else if(valueToGet === 'dbfilename') {
-          connection.write(Encoder.encodeValue(['dbfilename', dbFileName]));
+          connection.write(Encoder.encodeValue(['dbfilename', Config.get().dbFileName]));
         }
         break;
       }
