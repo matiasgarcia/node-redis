@@ -1,3 +1,5 @@
+import { groupIntoPairs } from './utils.js';
+
 const config = {
   rdbFileDir: undefined,
   dbFileName: undefined,
@@ -8,7 +10,7 @@ export function loadConfiguration(args) {
     return config;
   }
 
-  Utils.groupIntoPairs(args).forEach(([arg, value]) => {
+  groupIntoPairs(args).forEach(([arg, value]) => {
     const parsedArg = arg.replace('--', '');
     if(!value) throw new Error(`Missing arg for: ${arg}`);
     switch(parsedArg) {
