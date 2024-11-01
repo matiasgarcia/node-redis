@@ -36,7 +36,14 @@ function parseMetadataSection(buffer) {
 
 // This is a bare minimum implementation where it expects a single key with a string value to be stored in the RDB file. No expiration included.
 export function readRdbFile(rdbFileDir, dbFileName) {
+  if(rdbFileDir === undefined && dbFileName === undefined) {
+    return {
+      db: {}
+    }
+  }
+
   const pathToFile = [rdbFileDir, dbFileName].join('/'); // use proper fs
+  console.log({ rdbFileDir, dbFileName })
   if (!fs.existsSync(pathToFile)) {
     return {
       db: {}
