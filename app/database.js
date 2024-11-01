@@ -14,4 +14,16 @@ function get(key) {
   return value;
 }
 
-export { set, get }
+function load(obj) {
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+        map[key] = obj[key]
+    }
+  }
+}
+
+function keys() {
+  return Object.keys(map);
+}
+
+export { set, get, load, keys }

@@ -3,8 +3,12 @@ import * as Utils from './utils.js';
 import * as Database from './database.js';
 import * as Encoder from './encoder.js';
 import * as Config from './config.js';
+import * as Rdb from './rdb.js';
 
-Config.loadConfiguration(process.argv.slice(2, process.argv.length))
+const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
+const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
+Database.load(rdb.db)
+
 
 // https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
 const server = net.createServer((connection) => {
@@ -47,6 +51,13 @@ const server = net.createServer((connection) => {
           connection.write(Encoder.encodeValue(['dir', Config.get().rdbFileDir]));
         } else if(valueToGet === 'dbfilename') {
           connection.write(Encoder.encodeValue(['dbfilename', Config.get().dbFileName]));
+        }
+        break;
+      }
+      case 'KEYS': {
+        const key = tokens[4];
+        if (key == "*") {
+          connection.write(Encoder.encodeValue(Database.keys()))
         }
         break;
       }
