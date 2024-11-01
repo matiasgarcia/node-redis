@@ -64,7 +64,7 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   if (databaseSection[1] !== HASH_TABLE_SECTION_START) throw new Error('Missing hash table');
   const sizeOfTheKeyValueTable = databaseSection[2];
   const sizeOfTheExpiresTable = databaseSection[3];
-  // console.log({ databaseIndex, sizeOfTheKeyValueTable, sizeOfTheExpiresTable, databaseSection: databaseSection.toString(), databaseSectionBuffer: databaseSection })
+  console.log({ databaseIndex, sizeOfTheKeyValueTable, sizeOfTheExpiresTable, databaseSection: databaseSection.toString(), databaseSectionBuffer: databaseSection })
   
   const startingIndex = 4;
   const valueType = databaseSection[startingIndex] === 0x00 ? 'string' : new Error('test');

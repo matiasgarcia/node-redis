@@ -9,7 +9,6 @@ const config = Config.loadConfiguration(process.argv.slice(2, process.argv.lengt
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
 Database.load(rdb.db)
 
-
 // https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
 const server = net.createServer((connection) => {
   connection.on('data', (stream) => {
