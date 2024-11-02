@@ -56,7 +56,7 @@ function parseDatabaseSection(databaseSection) {
   while(position < databaseSection.length || keyCount < sizeOfTheKeyValueTable) {
     let expiresAt = undefined;
     if(databaseSection[position] === EXPIRY_MS_MARKER) {
-      const expiryRead = readUnsigned(databaseSection, position + 1);
+      const expiryRead = readUnsignedLittleEndian(databaseSection, position + 1);
       expiresAt = new Date(Number(expiryRead.value));
       position += expiryRead.bytes + 1;
     }
@@ -112,7 +112,7 @@ function readString(buffer, position) {
   return { value, bytes: 1 + length };
 }
 
-function readUnsigned(buffer, position) {
+function readUnsignedLittleEndian(buffer, position) {
   const value = buffer.slice(position, position + UNSIGNED_LONG_BYTE_SIZE).readBigUInt64LE(0);
   return { value, bytes: UNSIGNED_LONG_BYTE_SIZE };
 }
