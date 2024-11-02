@@ -1,11 +1,15 @@
 import { groupIntoPairs } from './utils.js';
 
-const config = {
+interface IConfig {
+  rdbFileDir: string | undefined,
+  dbFileName: string | undefined,
+}
+const config: IConfig = {
   rdbFileDir: undefined,
   dbFileName: undefined,
 }
 
-export function loadConfiguration(args) {
+export function loadConfiguration(args: Array<string>) {
   if(!args.length) {
     return config;
   }

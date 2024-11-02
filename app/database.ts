@@ -1,11 +1,18 @@
-const map = {};
+export interface IDatabase {
+  [key: string]: {
+    value: unknown,
+    expiresAt?: Date,
+  }
+}
 
-function set(key, value, opts = {}) {
+const map: IDatabase = {};
+
+function set(key: string, value: unknown, opts: { expiresInMilliseconds?: number }  = {}) {
   const { expiresInMilliseconds } = opts;
   map[key] = { value, expiresAt: expiresInMilliseconds ? new Date(new Date().getTime() + expiresInMilliseconds) : undefined }
 }
 
-function get(key) {
+function get(key: string) {
   if(map[key] === undefined) return undefined;
 
   const { value, expiresAt } = map[key];
@@ -14,7 +21,7 @@ function get(key) {
   return value;
 }
 
-function load(obj) {
+function load(obj: IDatabase) {
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
         map[key] = { value: obj[key].value, expiresAt: obj[key].expiresAt }

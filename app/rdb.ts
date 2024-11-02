@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import * as Utils from './utils.js';
+import { IDatabase } from './database.js';
 
 const METADATA_START = 0xFA;
 const DATABASE_SECTION_START = 0xFE;
@@ -10,15 +12,18 @@ const EXPIRY_MS_MARKER = 0xFC;
 
 const UNSIGNED_LONG_BYTE_SIZE = 8;
 
-function getChunksFromMetadatasection(buffer) {
-  let chunks = [];
+function getChunksFromMetadatasection(buffer: Buffer): Buffer[] {
+  const chunks: number[][] = [];
   let currentChunkIndex = -1;
 
-  for(const element of buffer) {
-    if(element === METADATA_START) {
+  for (const element of buffer) {
+    if (element === METADATA_START) {
       currentChunkIndex += 1;
       chunks[currentChunkIndex] = [];
     } else {
+      if (currentChunkIndex === -1) {
+        throw new Error("METADATA_START not found before data elements.");
+      }
       chunks[currentChunkIndex].push(element);
     }
   }
@@ -26,10 +31,11 @@ function getChunksFromMetadatasection(buffer) {
   return chunks.map(e => Buffer.from(e));
 }
 
-function parseMetadataSection(buffer) {
+function parseMetadataSection(buffer: Buffer) {
   const chunks = getChunksFromMetadatasection(buffer);
   return chunks.map(chunk => {
     const sizeOfNameOfMetadata = chunk.at(0);
+    Utils.invariant(typeof sizeOfNameOfMetadata === 'number', 'foo');
     const nameOfMetadata = chunk.subarray(1, sizeOfNameOfMetadata + 1);
     const valueOfMetadata = chunk.subarray(sizeOfNameOfMetadata + 2);
     return {
@@ -44,7 +50,7 @@ const EMPTY_RDB = {
   db: {}
 }
 
-function parseDatabaseSection(databaseSection) {
+function parseDatabaseSection(databaseSection: Buffer): IDatabase {
   const databaseIndex = databaseSection[0];
   if (databaseSection[1] !== HASH_TABLE_SECTION_START) throw new Error('Missing hash table');
   const sizeOfTheKeyValueTable = databaseSection[2];
@@ -52,7 +58,7 @@ function parseDatabaseSection(databaseSection) {
   
   let position = 4;
   let keyCount = 0;
-  let db = {}
+  let db: IDatabase = {}
   while(position < databaseSection.length || keyCount < sizeOfTheKeyValueTable) {
     let expiresAt = undefined;
     if(databaseSection[position] === EXPIRY_MS_MARKER) {
@@ -79,7 +85,7 @@ function parseDatabaseSection(databaseSection) {
   return db;
 }
 
-export function readRdbFile(rdbFileDir, dbFileName) {
+export function readRdbFile(rdbFileDir: string | undefined, dbFileName: string | undefined) {
   if(rdbFileDir === undefined && dbFileName === undefined) {
     return EMPTY_RDB;
   }
@@ -106,13 +112,13 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   }
 }
 
-function readString(buffer, position) {
+function readString(buffer: Buffer, position: number) {
   const length = buffer[position];
   const value = buffer.slice(position + 1, position + 1 + length).toString();
   return { value, bytes: 1 + length };
 }
 
-function readUnsignedLittleEndian(buffer, position) {
+function readUnsignedLittleEndian(buffer: Buffer, position: number) {
   const value = buffer.slice(position, position + UNSIGNED_LONG_BYTE_SIZE).readBigUInt64LE(0);
   return { value, bytes: UNSIGNED_LONG_BYTE_SIZE };
 }
