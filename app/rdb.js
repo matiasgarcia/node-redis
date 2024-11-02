@@ -56,11 +56,9 @@ function parseDatabaseSection(databaseSection) {
   while(position < databaseSection.length || keyCount < sizeOfTheKeyValueTable) {
     let expiresAt = undefined;
     if(databaseSection[position] === EXPIRY_MS_MARKER) {
-      const startUnsignedIndex = position + 1;
-      const endUnsignedIndex = startUnsignedIndex + UNSIGNED_LONG_BYTE_SIZE;
-      const unsignedInt = databaseSection.slice(startUnsignedIndex, endUnsignedIndex).readBigUInt64LE(0);
-      expiresAt = new Date(Number(unsignedInt));
-      position += 1 + UNSIGNED_LONG_BYTE_SIZE;
+      const expiryRead = readUnsigned(databaseSection, position + 1);
+      expiresAt = new Date(Number(expiryRead.value));
+      position += expiryRead.bytes + 1;
     }
     if(databaseSection[position] !== STRING_DATA_TYPE) throw new Error('not supported data type');
     position += 1;
@@ -112,4 +110,9 @@ function readString(buffer, position) {
   const length = buffer[position];
   const value = buffer.slice(position + 1, position + 1 + length).toString();
   return { value, bytes: 1 + length };
+}
+
+function readUnsigned(buffer, position) {
+  const value = buffer.slice(position, position + UNSIGNED_LONG_BYTE_SIZE).readBigUInt64LE(0);
+  return { value, bytes: UNSIGNED_LONG_BYTE_SIZE };
 }
