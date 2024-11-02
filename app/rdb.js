@@ -5,6 +5,8 @@ const DATABASE_SECTION_START = 0xFE;
 const END_OF_FILE_MARKER = 0xFF;
 const HASH_TABLE_SECTION_START = 0xFB;
 
+const STRING_DATA_TYPE = 0x00;
+
 function getChunksFromMetadatasection(buffer) {
   let chunks = [];
   let currentChunkIndex = -1;
@@ -45,7 +47,6 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   }
 
   const pathToFile = [rdbFileDir, dbFileName].join('/'); // use proper fs
-  console.log({ rdbFileDir, dbFileName })
   if (!fs.existsSync(pathToFile)) {
     return EMPTY_RDB;
   }
@@ -64,19 +65,37 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   if (databaseSection[1] !== HASH_TABLE_SECTION_START) throw new Error('Missing hash table');
   const sizeOfTheKeyValueTable = databaseSection[2];
   const sizeOfTheExpiresTable = databaseSection[3];
-  console.log({ databaseIndex, sizeOfTheKeyValueTable, sizeOfTheExpiresTable, databaseSection: databaseSection.toString(), databaseSectionBuffer: databaseSection })
   
-  const startingIndex = 4;
-  const valueType = databaseSection[startingIndex] === 0x00 ? 'string' : new Error('test');
-  const keyNameStartingIndex = startingIndex + 1;
-  const keyNameSize = databaseSection[keyNameStartingIndex];
-  const keyName = databaseSection.subarray(keyNameStartingIndex + 1, keyNameStartingIndex + 1 + keyNameSize).toString();
-  const keyValueIndex = keyNameStartingIndex + 1 + keyNameSize + 1;
-  const keyValue = databaseSection.subarray(keyValueIndex).toString();
+  let position = 4;
+  let keyCount = 0;
+  let db = {}
+  while(position < databaseSection.length || keyCount < sizeOfTheKeyValueTable) {
+    if(databaseSection[position] !== STRING_DATA_TYPE) {
+      throw new Error('only strings are supported');
+    }
+
+    position += 1;
+
+    const keyNameRead = readString(databaseSection, position);
+    const keyName = keyNameRead.value;
+    position += keyNameRead.bytes;
+
+    const valueRead = readString(databaseSection, position);
+    const value = valueRead.value;
+    position += valueRead.bytes;
+
+    db[keyName] = { value };
+
+    keyCount += 1;
+  }
   
   return {
-    db: {
-      [keyName]: keyValue,
-    }
+    db,
   }
+}
+
+function readString(buffer, position) {
+  const length = buffer[position];
+  const value = buffer.slice(position + 1, position + 1 + length).toString();
+  return { value, bytes: 1 + length };
 }
