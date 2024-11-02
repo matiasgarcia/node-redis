@@ -1,6 +1,7 @@
 const map = {};
 
 function set(key, value, opts = {}) {
+  // @ts-expect-error ignore for now
   const { expiresInMilliseconds } = opts;
   map[key] = { value, expiresAt: expiresInMilliseconds ? new Date(new Date().getTime() + expiresInMilliseconds) : undefined }
 }
