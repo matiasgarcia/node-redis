@@ -1,6 +1,13 @@
 {
   "name": "@codecrafters/redis",
   "version": "1.0.0",
-  "dependencies": {},
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.6",
+    "typescript": "^5.6.3"
+  },
+  "node": ">=21.0.0"
 }
