@@ -44,27 +44,7 @@ const EMPTY_RDB = {
   db: {}
 }
 
-export function readRdbFile(rdbFileDir, dbFileName) {
-  if(rdbFileDir === undefined && dbFileName === undefined) {
-    return EMPTY_RDB;
-  }
-
-  const pathToFile = [rdbFileDir, dbFileName].join('/'); // use proper fs
-  if (!fs.existsSync(pathToFile)) {
-    return EMPTY_RDB;
-  }
-
-  const rdb = fs.readFileSync(pathToFile);
-  const version = rdb.subarray(0, 9).toString();
-  if(version !== 'REDIS0011') throw new Error('Unexpected redis version');
-  if(rdb[8] === METADATA_START) throw new Error('Missing metadata section');
-  const databaseSectionStart = rdb.findIndex(value => value === DATABASE_SECTION_START);
-  const metadataBuffer = rdb.subarray(9, databaseSectionStart);
-  const metadataSection = parseMetadataSection(metadataBuffer);
-  const endOfFileStart = rdb.findIndex(value => value === END_OF_FILE_MARKER);
-  const databaseSection = rdb.subarray(databaseSectionStart + 1, endOfFileStart);
-  
-  console.log(databaseSection);
+function parseDatabaseSection(databaseSection) {
   const databaseIndex = databaseSection[0];
   if (databaseSection[1] !== HASH_TABLE_SECTION_START) throw new Error('Missing hash table');
   const sizeOfTheKeyValueTable = databaseSection[2];
@@ -97,6 +77,31 @@ export function readRdbFile(rdbFileDir, dbFileName) {
 
     keyCount += 1;
   }
+
+  return db;
+}
+
+export function readRdbFile(rdbFileDir, dbFileName) {
+  if(rdbFileDir === undefined && dbFileName === undefined) {
+    return EMPTY_RDB;
+  }
+
+  const pathToFile = [rdbFileDir, dbFileName].join('/'); // use proper fs
+  if (!fs.existsSync(pathToFile)) {
+    return EMPTY_RDB;
+  }
+
+  const rdb = fs.readFileSync(pathToFile);
+  const version = rdb.subarray(0, 9).toString();
+  if(version !== 'REDIS0011') throw new Error('Unexpected redis version');
+  if(rdb[8] === METADATA_START) throw new Error('Missing metadata section');
+  const databaseSectionStart = rdb.findIndex(value => value === DATABASE_SECTION_START);
+  const metadataBuffer = rdb.subarray(9, databaseSectionStart);
+  const metadataSection = parseMetadataSection(metadataBuffer);
+  const endOfFileStart = rdb.findIndex(value => value === END_OF_FILE_MARKER);
+  const databaseSection = rdb.subarray(databaseSectionStart + 1, endOfFileStart);
+
+  const db = parseDatabaseSection(databaseSection);
 
   return {
     db,
