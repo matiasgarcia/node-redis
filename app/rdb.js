@@ -88,7 +88,7 @@ export function readRdbFile(rdbFileDir, dbFileName) {
 
     keyCount += 1;
   }
-  
+
   return {
     db,
   }

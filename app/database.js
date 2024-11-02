@@ -17,7 +17,7 @@ function get(key) {
 function load(obj) {
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
-        map[key] = { value: obj[key] }
+        map[key] = { value: obj[key].value }
     }
   }
 }
