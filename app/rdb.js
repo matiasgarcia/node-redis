@@ -6,6 +6,9 @@ const END_OF_FILE_MARKER = 0xFF;
 const HASH_TABLE_SECTION_START = 0xFB;
 
 const STRING_DATA_TYPE = 0x00;
+const EXPIRY_MS_MARKER = 0xFC;
+
+const UNSIGNED_LONG_BYTE_SIZE = 8;
 
 function getChunksFromMetadatasection(buffer) {
   let chunks = [];
@@ -61,6 +64,7 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   const endOfFileStart = rdb.findIndex(value => value === END_OF_FILE_MARKER);
   const databaseSection = rdb.subarray(databaseSectionStart + 1, endOfFileStart);
   
+  console.log(databaseSection);
   const databaseIndex = databaseSection[0];
   if (databaseSection[1] !== HASH_TABLE_SECTION_START) throw new Error('Missing hash table');
   const sizeOfTheKeyValueTable = databaseSection[2];
@@ -70,10 +74,15 @@ export function readRdbFile(rdbFileDir, dbFileName) {
   let keyCount = 0;
   let db = {}
   while(position < databaseSection.length || keyCount < sizeOfTheKeyValueTable) {
-    if(databaseSection[position] !== STRING_DATA_TYPE) {
-      throw new Error('only strings are supported');
+    let expiresAt = undefined;
+    if(databaseSection[position] === EXPIRY_MS_MARKER) {
+      const startUnsignedIndex = position + 1;
+      const endUnsignedIndex = startUnsignedIndex + UNSIGNED_LONG_BYTE_SIZE;
+      const unsignedInt = databaseSection.slice(startUnsignedIndex, endUnsignedIndex).readBigUInt64LE(0);
+      expiresAt = new Date(Number(unsignedInt));
+      position += 1 + UNSIGNED_LONG_BYTE_SIZE;
     }
-
+    if(databaseSection[position] !== STRING_DATA_TYPE) throw new Error('not supported data type');
     position += 1;
 
     const keyNameRead = readString(databaseSection, position);
@@ -84,7 +93,7 @@ export function readRdbFile(rdbFileDir, dbFileName) {
     const value = valueRead.value;
     position += valueRead.bytes;
 
-    db[keyName] = { value };
+    db[keyName] = { value, expiresAt };
 
     keyCount += 1;
   }
