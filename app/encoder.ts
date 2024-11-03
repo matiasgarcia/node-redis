@@ -7,7 +7,7 @@ export function encodeValue(value: unknown): string {
   }
 
   if(typeof value === 'number') {
-    return value.toString();
+    return encodeValue(value.toString());
   }
 
   if(Array.isArray(value)) {
@@ -24,7 +24,7 @@ export function encodeValue(value: unknown): string {
   }
 
   if(typeof value === 'string') {
-    return `$${value.length}\r\n${value}\r\n`;
+    return encodeValue(new BulkString([value]));
   }
 
   throw new Error(`Cannot encode value: ${value}`)
