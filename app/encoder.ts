@@ -7,7 +7,7 @@ export function encodeValue(value: unknown): string {
   }
 
   if(typeof value === 'number') {
-    return value.toString();
+    return `:${value.toString()}`;
   }
 
   if(Array.isArray(value)) {
