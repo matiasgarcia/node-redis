@@ -62,6 +62,13 @@ const server = net.createServer((connection) => {
         }
         break;
       }
+      case 'INFO': {
+        const key = tokens[4];
+        Utils.invariant(key !== undefined, 'key expected');
+        Utils.invariant(key !== 'replication', 'only replication supported');
+        connection.write(Encoder.encodeValue([`role:${config.role}`]));
+        break;
+      }
       default:
         console.error('unknown command', command);
         break;

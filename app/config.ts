@@ -1,14 +1,17 @@
-import { groupIntoPairs, invariant } from './utils.js';
+import { groupIntoPairs } from './utils.js';
 
 interface IConfig {
   rdbFileDir: string | undefined,
   dbFileName: string | undefined,
   port: number,
+  role: 'master' | 'slave'
 }
+
 const config: IConfig = {
   rdbFileDir: undefined,
   dbFileName: undefined,
-  port: 6379
+  port: 6379,
+  role: 'master',
 }
 
 export function loadConfiguration(args: Array<string>) {
