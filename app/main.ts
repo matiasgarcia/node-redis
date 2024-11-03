@@ -4,6 +4,7 @@ import * as Database from './database.js';
 import * as Encoder from './encoder.js';
 import * as Config from './config.js';
 import * as Rdb from './rdb.js';
+import { BulkString } from './bulkString.js';
 
 const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
@@ -66,12 +67,12 @@ const server = net.createServer((connection) => {
         const key = tokens[4];
         if(key === undefined) {
           const configInfo = Config.infoConfigKeys().map(k => `${Utils.camelToSnakeCase(k)}:${config[k]}`)
-          connection.write(Encoder.encodeValue(configInfo));
+          connection.write(Encoder.encodeValue(new BulkString(configInfo)));
         } else if(key === "replication") {
           const info = Object.entries(Config.getReplicationInfo()).map(([k, v]: [k: string, v: unknown]) => 
             `${Utils.camelToSnakeCase(k)}:${v}`
           )
-          connection.write(Encoder.encodeValue(info));
+          connection.write(Encoder.encodeValue(new BulkString(info)));
         } else if(Config.isInfoConfigKey(key)) {
           connection.write(Encoder.encodeValue(`${Utils.camelToSnakeCase(key)}:${config[key]}`));
         } else {
