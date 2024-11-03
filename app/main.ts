@@ -109,13 +109,29 @@ server
     const client = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
       console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
     });
-    client.on('connect', () => {
-      write(client, Encoder.encodeValue(['PING']));
-      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port]));
-      write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
-    })
-    client.on('data', (stream) => {
-      console.debug(`>> ${stream.toString()}`);
-    })
+    handShakeWithMaster(client);
   }
 })
+
+function handShakeWithMaster(client: net.Socket) {
+  client.on('connect', () => {
+    write(client, Encoder.encodeValue(['PING']));
+
+    client.once('data', (stream) => {
+      console.debug(`>> ${stream.toString()}`);
+      Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('PONG')), 'Expected PONG during handshake');
+      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port]));
+
+      client.once('data', (stream) => {
+        Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
+        console.debug(`>> ${stream.toString()}`);
+        write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
+
+        client.on('data', (stream) => {
+          Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
+          console.debug(`>> ${stream.toString()}`);
+        })
+      })
+    })
+  })
+}
