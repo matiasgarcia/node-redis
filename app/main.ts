@@ -69,4 +69,6 @@ const server = net.createServer((connection) => {
   })
 });
 
-server.listen(6379, "127.0.0.1");
+server
+.listen(config.port, "127.0.0.1")
+.on('listening', () => console.debug(`Listening on port ${config.port}`))
