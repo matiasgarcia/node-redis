@@ -66,7 +66,7 @@ const server = net.createServer((connection) => {
         const key = tokens[4];
         Utils.invariant(key !== undefined, 'key expected');
         Utils.invariant(key !== 'role', 'only role supported');
-        connection.write(Encoder.encodeValue([`role:${config.role}`]));
+        connection.write(Encoder.encodeValue(`role:${config.role}`));
         break;
       }
       default:
