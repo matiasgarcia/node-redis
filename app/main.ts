@@ -114,22 +114,36 @@ server
 })
 
 function handShakeWithMaster(client: net.Socket) {
+  const handShakeTimeout = 30000;
+  let handshakeSuccess = false;
+
+  setTimeout(() => {
+    if(!handshakeSuccess) {
+      throw new Error('Handshake failed');
+    }
+  }, handShakeTimeout)
+
   client.on('connect', () => {
     write(client, Encoder.encodeValue(['PING']));
 
     client.once('data', (stream) => {
       console.debug(`>> ${stream.toString()}`);
       Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('PONG')), 'Expected PONG during handshake');
-      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port]));
+      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port.toString()]));
 
       client.once('data', (stream) => {
-        Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
         console.debug(`>> ${stream.toString()}`);
+        Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
         write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
 
-        client.on('data', (stream) => {
-          Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
+        client.once('data', (stream) => {
           console.debug(`>> ${stream.toString()}`);
+          Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
+          handshakeSuccess = true;
+
+          client.on('data', (stream) => {
+            console.debug(`>> ${stream.toString()}`);
+          })
         })
       })
     })
