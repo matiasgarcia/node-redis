@@ -5,6 +5,7 @@ import * as Encoder from './encoder.js';
 import * as Config from './config.js';
 import * as Rdb from './rdb.js';
 import { BulkString } from './bulkString.js';
+import { SimpleString } from './simpleString.js';
 
 const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
@@ -27,7 +28,7 @@ const server = net.createServer((connection) => {
     const command = tokens[2];
     switch (command.toUpperCase()) {
       case 'PING':
-        write(connection, `+PONG\r\n`);
+        write(connection, Encoder.encodeValue(new SimpleString('PONG')));
         break;
       case 'ECHO': {
         const arg1 = tokens[4];
@@ -41,7 +42,7 @@ const server = net.createServer((connection) => {
         const expirationTime = tokens[10];
         const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
         Database.set(key, value, options)
-        write(connection, `+OK\r\n`);
+        write(connection, Encoder.encodeValue(new SimpleString('OK')));
         break;
       }
       case 'GET': {
@@ -85,6 +86,14 @@ const server = net.createServer((connection) => {
         }
         break;
       }
+      case 'REPLCONF': {
+        const key = tokens[4];
+        const value = tokens[6]; // do nothing for now
+        if(key === 'listening-port' || key === 'capa') {
+          write(connection, Encoder.encodeValue(new SimpleString('OK')));
+        }
+        break;
+      }
       default:
         console.error('unknown command', command);
         break;
@@ -101,7 +110,12 @@ server
       console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
     });
     client.on('connect', () => {
-      write(client, Encoder.encodeValue(['PING']))
+      write(client, Encoder.encodeValue(['PING']));
+      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port]));
+      write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
+    })
+    client.on('data', (stream) => {
+      console.debug(`>> ${stream.toString()}`);
     })
   }
 })
