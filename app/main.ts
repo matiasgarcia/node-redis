@@ -65,8 +65,11 @@ const server = net.createServer((connection) => {
       case 'INFO': {
         const key = tokens[4];
         if(key === undefined) {
-          const info = Config.infoConfigKeys().map((k) => 
-            `${Utils.camelToSnakeCase(k)}:${config[k]}`
+          const configInfo = Config.infoConfigKeys().map(k => `${Utils.camelToSnakeCase(k)}:${config[k]}`)
+          connection.write(Encoder.encodeValue(configInfo));
+        } else if(key === "replication") {
+          const info = Object.entries(Config.getReplicationInfo()).map(([k, v]: [k: string, v: unknown]) => 
+            `${Utils.camelToSnakeCase(k)}:${v}`
           )
           connection.write(Encoder.encodeValue(info));
         } else if(Config.isInfoConfigKey(key)) {

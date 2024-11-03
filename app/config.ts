@@ -31,6 +31,13 @@ export function isInfoConfigKey(t: string): t is ConfigKey {
   return infoConfigKeys().includes(t as ConfigKey);
 }
 
+export function getReplicationInfo() {
+  return {
+    masterReplid: config.masterReplid,
+    masterReplOffset: config.masterReplOffset,
+  }
+}
+
 export function loadConfiguration(args: Array<string>) {
   config.masterReplid = crypto.randomBytes(20).toString('hex');
 
