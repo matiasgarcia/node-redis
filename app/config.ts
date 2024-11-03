@@ -1,16 +1,24 @@
-import { groupIntoPairs } from './utils.js';
+import * as Utils from './utils.js';
 import crypto from 'node:crypto';
 
 export type ConfigKey = keyof IConfig;
 
-interface IConfig {
+export type IConfig = {
   rdbFileDir: string | undefined,
   dbFileName: string | undefined,
   port: number,
-  role: 'master' | 'slave',
   masterReplid: string,
   masterReplOffset: number,
-}
+} & ({
+  role: 'master',
+  master: undefined
+} | {
+  role: 'slave',
+  master: {
+    host: string,
+    port: number
+  }
+})
 
 const config: IConfig = {
   rdbFileDir: undefined,
@@ -18,7 +26,8 @@ const config: IConfig = {
   port: 6379,
   role: 'master',
   masterReplid: '',
-  masterReplOffset: 0
+  masterReplOffset: 0,
+  master: undefined
 }
 
 const INFO_CONFIG_KEYS: ConfigKey[] = ['role', 'masterReplid', 'masterReplOffset'];
@@ -46,7 +55,7 @@ export function loadConfiguration(args: Array<string>) {
     return config;
   }
 
-  groupIntoPairs(args).forEach(([arg, value]) => {
+  Utils.groupIntoPairs(args).forEach(([arg, value]) => {
     const parsedArg = arg.replace('--', '');
     if(!value) throw new Error(`Missing arg for: ${arg}`);
     switch(parsedArg) {
@@ -63,9 +72,14 @@ export function loadConfiguration(args: Array<string>) {
         break;
       }
       case 'replicaof': {
-        const address = value;
-        // do nothing for now
+        const [host, port] = value.split(' ');
+        const parsedPort = Number(port);
+        Utils.invariant(Number.isFinite(parsedPort), 'port must be a number');
         config.role = 'slave';
+        config.master = {
+          host,
+          port: parsedPort,
+        }
         break;
       }
       default:
