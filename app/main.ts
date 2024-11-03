@@ -120,7 +120,7 @@ function handShakeWithMaster(client: net.Socket) {
     client.once('data', (stream) => {
       console.debug(`>> ${stream.toString()}`);
       Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('PONG')), 'Expected PONG during handshake');
-      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port]));
+      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port.toString()]));
 
       client.once('data', (stream) => {
         Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
