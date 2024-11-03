@@ -33,6 +33,7 @@ export function isInfoConfigKey(t: string): t is ConfigKey {
 
 export function getReplicationInfo() {
   return {
+    role: config.role,
     masterReplid: config.masterReplid,
     masterReplOffset: config.masterReplOffset,
   }
