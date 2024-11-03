@@ -35,6 +35,12 @@ export function loadConfiguration(args: Array<string>) {
         config.port = Number(value);
         break;
       }
+      case 'replicaof': {
+        const address = value;
+        // do nothing for now
+        config.role = 'slave';
+        break;
+      }
       default:
         throw new Error(`Unknown arg: ${arg}`)
     }

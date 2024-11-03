@@ -78,4 +78,4 @@ const server = net.createServer((connection) => {
 
 server
 .listen(config.port, "127.0.0.1")
-.on('listening', () => console.debug(`Listening on port ${config.port}`))
+.on('listening', () => console.debug(`Listening on port ${config.port} as ${config.role}`))
