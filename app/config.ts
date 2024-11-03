@@ -1,10 +1,15 @@
 import { groupIntoPairs } from './utils.js';
+import crypto from 'node:crypto';
+
+export type ConfigKey = keyof IConfig;
 
 interface IConfig {
   rdbFileDir: string | undefined,
   dbFileName: string | undefined,
   port: number,
-  role: 'master' | 'slave'
+  role: 'master' | 'slave',
+  masterReplid: string,
+  masterReplOffset: number,
 }
 
 const config: IConfig = {
@@ -12,9 +17,23 @@ const config: IConfig = {
   dbFileName: undefined,
   port: 6379,
   role: 'master',
+  masterReplid: '',
+  masterReplOffset: 0
+}
+
+const INFO_CONFIG_KEYS: ConfigKey[] = ['role', 'masterReplid', 'masterReplOffset'];
+
+export function infoConfigKeys() {
+  return INFO_CONFIG_KEYS;
+}
+
+export function isInfoConfigKey(t: string): t is ConfigKey {
+  return infoConfigKeys().includes(t as ConfigKey);
 }
 
 export function loadConfiguration(args: Array<string>) {
+  config.masterReplid = crypto.randomBytes(20).toString('hex');
+
   if(!args.length) {
     return config;
   }

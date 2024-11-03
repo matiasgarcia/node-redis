@@ -64,9 +64,16 @@ const server = net.createServer((connection) => {
       }
       case 'INFO': {
         const key = tokens[4];
-        Utils.invariant(key !== undefined, 'key expected');
-        Utils.invariant(key !== 'role', 'only role supported');
-        connection.write(Encoder.encodeValue(`role:${config.role}`));
+        if(key === undefined) {
+          const info = Config.infoConfigKeys().map((k) => 
+            `${Utils.camelToSnakeCase(k)}:${config[k]}`
+          )
+          connection.write(Encoder.encodeValue(info));
+        } else if(Config.isInfoConfigKey(key)) {
+          connection.write(Encoder.encodeValue(`${Utils.camelToSnakeCase(key)}:${config[key]}`));
+        } else {
+          throw new Error(`invalid argument: ${key}`)
+        }
         break;
       }
       default:

@@ -16,3 +16,5 @@ export function safeUppercase(string: string | undefined) {
 export function invariant(condition: boolean, errMsg: string): asserts condition {
   if(!condition) throw new Error(errMsg);
 }
+
+export const camelToSnakeCase = (str: string) => str.replace(/[A-Z]/g, (letter: string) => `_${letter.toLowerCase()}`);
