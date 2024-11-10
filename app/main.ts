@@ -96,7 +96,7 @@ function receiveCommands(connection: net.Socket) {
         break;
       }
       case 'PSYNC': {
-        write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} 0`)));
+        write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
         break;
       }
       default:
