@@ -98,7 +98,7 @@ function receiveCommands(connection: net.Socket) {
       }
       case 'PSYNC': {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
-        write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+        write(connection, `$${EMPTY_RDB_FILE.length}\r\n${EMPTY_RDB_FILE}`);
         break;
       }
       default:
