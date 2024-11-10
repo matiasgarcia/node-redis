@@ -24,11 +24,7 @@ export async function performHandshake(client: net.Socket, config: Config.IConfi
     await expectResponse(client, 'OK');
     sendPsync(client);
 
-    // Handshake successful, clear timeout and continue
     clearTimeout(timeoutId);
-    client.on('data', (stream) => {
-      console.debug(`>> ${stream.toString()}`);
-    });
   } catch (err) {
     clearTimeout(timeoutId);
     throw err;
