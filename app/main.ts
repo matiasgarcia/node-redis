@@ -100,38 +100,64 @@ function receiveCommands(connection: net.Socket) {
     }
   })
 }
+const handShakeTimeout = 30000;
 
-function handShakeWithMaster(client: net.Socket) {
-  const handShakeTimeout = 30000;
-  let timeoutId = setTimeout(() => {
-      throw new Error('Handshake failed');
-  }, handShakeTimeout)
+async function performHandshake(client: net.Socket, config: Config.IConfig) {
+  const timeoutId = setTimeout(() => {
+    throw new Error('Handshake failed: Timeout exceeded');
+  }, handShakeTimeout);
 
-  client.on('connect', () => {
+  try {
+    await sendPing(client);
+    await expectResponse(client, 'PONG');
+    await sendReplConf(client, 'listening-port', config.port.toString());
+    await expectResponse(client, 'OK');
+    await sendReplConf(client, 'capa', 'psync2');
+    await expectResponse(client, 'OK');
+
+    // Handshake successful, clear timeout and continue
+    clearTimeout(timeoutId);
+    client.on('data', (stream) => {
+      console.debug(`>> ${stream.toString()}`);
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+function sendPing(client: net.Socket) {
+  return new Promise<void>((resolve, reject) => {
     write(client, Encoder.encodeValue(['PING']));
-
     client.once('data', (stream) => {
       console.debug(`>> ${stream.toString()}`);
-      Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('PONG')), 'Expected PONG during handshake');
-      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port.toString()]));
+      resolve();
+    });
+  });
+}
 
-      client.once('data', (stream) => {
-        console.debug(`>> ${stream.toString()}`);
-        Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
-        write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
+function sendReplConf(client: net.Socket, param: string, value: string) {
+  return new Promise<void>((resolve, reject) => {
+    write(client, Encoder.encodeValue(['REPLCONF', param, value]));
+    client.once('data', (stream) => {
+      console.debug(`>> ${stream.toString()}`);
+      resolve();
+    });
+  });
+}
 
-        client.once('data', (stream) => {
-          console.debug(`>> ${stream.toString()}`);
-          Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
-          clearTimeout(timeoutId);
-
-          client.on('data', (stream) => {
-            console.debug(`>> ${stream.toString()}`);
-          })
-        })
-      })
-    })
-  })
+function expectResponse(client: net.Socket, expectedResponse: string) {
+  return new Promise<void>((resolve, reject) => {
+    client.once('data', (stream) => {
+      const response = stream.toString();
+      console.debug(`>> ${response}`);
+      if (response === Encoder.encodeValue(new SimpleString(expectedResponse))) {
+        resolve();
+      } else {
+        reject(new Error(`Expected ${expectedResponse} during handshake, but got ${response}`));
+      }
+    });
+  });
 }
 
 const server = net
@@ -143,5 +169,5 @@ const server = net
   const client = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
     console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
   });
-  handShakeWithMaster(client);
+  performHandshake(client, config);
 })
