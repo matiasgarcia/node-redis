@@ -7,6 +7,7 @@ import * as Rdb from './rdb.js';
 import { BulkString } from './bulkString.js';
 import { SimpleString } from './simpleString.js';
 import { performHandshake } from './replica/handshake.js';
+import { EMPTY_RDB_FILE } from './const.js';
 
 const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
@@ -97,6 +98,7 @@ function receiveCommands(connection: net.Socket) {
       }
       case 'PSYNC': {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
+        write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
         break;
       }
       default:
