@@ -123,11 +123,9 @@ net
 .on('listening', async () => {
   console.debug(`Listening on port ${config.port} as ${config.role}`)
   if(config.role !== 'slave') return;
-  const client = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
+  const master = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
     console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
   });
-  await performHandshake(client, config);
-  client.on('data', (stream) => {
-    console.debug(`>> ${stream.toString()}`);
-  });
+  await performHandshake(master, config);
+  receiveCommands(master);
 })
