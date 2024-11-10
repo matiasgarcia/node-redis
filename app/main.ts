@@ -20,6 +20,12 @@ function write(socket: net.Socket, val: Buffer | string) {
   socket.write(val);
 }
 
+let replicaConnection: net.Socket | undefined = undefined;
+
+function forwardWrite(val: Buffer | string) {
+  if(replicaConnection) write(replicaConnection, val);
+}
+
 function receiveCommands(connection: net.Socket) {
   connection.on('data', (stream) => {
     const tokens = stream.toString().split('\r\n');
@@ -45,6 +51,7 @@ function receiveCommands(connection: net.Socket) {
         const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
         Database.set(key, value, options)
         write(connection, Encoder.encodeValue(new SimpleString('OK')));
+        forwardWrite(stream);
         break;
       }
       case 'GET': {
@@ -99,6 +106,8 @@ function receiveCommands(connection: net.Socket) {
       case 'PSYNC': {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
         write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+        // Handshake finished, assume RDB File was processed correctly
+        replicaConnection = connection;
         break;
       }
       default:
