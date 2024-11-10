@@ -22,6 +22,7 @@ export async function performHandshake(client: net.Socket, config: Config.IConfi
     await expectResponse(client, 'OK');
     sendReplConf(client, 'capa', 'psync2');
     await expectResponse(client, 'OK');
+    sendPsync(client);
 
     // Handshake successful, clear timeout and continue
     clearTimeout(timeoutId);
@@ -40,6 +41,10 @@ function sendPing(client: net.Socket) {
 
 function sendReplConf(client: net.Socket, param: string, value: string) {
   write(client, Encoder.encodeValue(['REPLCONF', param, value]));
+}
+
+function sendPsync(client: net.Socket) {
+  write(client, Encoder.encodeValue(['PSYNC', '?', '-1']))
 }
 
 function expectResponse(client: net.Socket, expectedResponse: string) {

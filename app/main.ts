@@ -95,6 +95,9 @@ function receiveCommands(connection: net.Socket) {
         }
         break;
       }
+      case 'PSYNC': {
+        write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} 0`)))
+      }
       default:
         console.error('unknown command', command);
         break;
