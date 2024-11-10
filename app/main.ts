@@ -15,7 +15,7 @@ Database.load(rdb.db)
 
 console.debug('Loaded database', rdb.db)
 
-function write(socket: net.Socket, val: string) {
+function write(socket: net.Socket, val: Buffer | string) {
   console.debug(`<< ${val}`)
   socket.write(val);
 }
