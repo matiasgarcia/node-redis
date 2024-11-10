@@ -98,6 +98,11 @@ function receiveCommands(connection: net.Socket) {
       }
       case 'PSYNC': {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
+        let binaryString = '';
+        EMPTY_RDB_FILE.forEach(byte => {
+            binaryString += byte.toString(2).padStart(8, '0');
+        });
+        write(connection, `$${binaryString.length}\r\n`);
         write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
         break;
       }
