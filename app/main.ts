@@ -20,10 +20,10 @@ function write(socket: net.Socket, val: Buffer | string) {
   socket.write(val);
 }
 
-let replicaConnection: net.Socket | undefined = undefined;
+let replicaConnections: net.Socket[] = [];
 
 function forwardWrite(val: Buffer | string) {
-  if(replicaConnection) write(replicaConnection, val);
+  replicaConnections.forEach((replicaConnection) => write(replicaConnection, val))
 }
 
 function receiveCommands(connection: net.Socket) {
@@ -107,7 +107,7 @@ function receiveCommands(connection: net.Socket) {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
         write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
         // Handshake finished, assume RDB File was processed correctly
-        replicaConnection = connection;
+        replicaConnections.push(connection);
         break;
       }
       default:
