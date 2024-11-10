@@ -26,94 +26,98 @@ function forwardWrite(val: Buffer | string) {
   replicaConnections.forEach((replicaConnection) => write(replicaConnection, val))
 }
 
+function processCommand(stream: Buffer, connection: net.Socket) {
+  const tokens = stream.toString().split('\r\n');
+  console.debug(`>> ${stream.toString('ascii')}`);
+  if (tokens.length === 0) {
+    return;
+  }
+  const command = tokens[2]?.toUpperCase() ?? '';
+  if(command === 'SET') forwardWrite(stream);
+  switch (command) {
+    case 'PING':
+      write(connection, Encoder.encodeValue(new SimpleString('PONG')));
+      break;
+    case 'ECHO': {
+      const arg1 = tokens[4];
+      write(connection, Encoder.encodeValue(arg1));
+      break;
+    }
+    case 'SET': {
+      const key = tokens[4];
+      const value = tokens[6];
+      const opts = tokens[8] ?? '';
+      const expirationTime = tokens[10];
+      const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
+      Database.set(key, value, options)
+      write(connection, Encoder.encodeValue(new SimpleString('OK')));
+      break;
+    }
+    case 'GET': {
+      const key = tokens[4];
+      const value = Database.get(key);
+      write(connection, Encoder.encodeValue(value))
+      break;
+    }
+    case 'CONFIG': {
+      const command = Utils.safeUppercase(tokens[4]);
+      if(command !== "GET") return;
+      const valueToGet = tokens[6];
+      if(valueToGet === 'dir') {
+        write(connection, Encoder.encodeValue(['dir', Config.get().rdbFileDir]));
+      } else if(valueToGet === 'dbfilename') {
+        write(connection, Encoder.encodeValue(['dbfilename', Config.get().dbFileName]));
+      }
+      break;
+    }
+    case 'KEYS': {
+      const key = tokens[4];
+      if (key == "*") {
+        write(connection, Encoder.encodeValue(Database.keys()))
+      }
+      break;
+    }
+    case 'INFO': {
+      const key = tokens[4];
+      if(key === undefined) {
+        const configInfo = Config.infoConfigKeys().map(k => `${Utils.camelToSnakeCase(k)}:${config[k]}`)
+        write(connection, Encoder.encodeValue(new BulkString(configInfo)));
+      } else if(key === "replication") {
+        const info = Object.entries(Config.getReplicationInfo()).map(([k, v]: [k: string, v: unknown]) => 
+          `${Utils.camelToSnakeCase(k)}:${v}`
+        )
+        write(connection, Encoder.encodeValue(new BulkString(info)));
+      } else if(Config.isInfoConfigKey(key)) {
+        write(connection, Encoder.encodeValue(`${Utils.camelToSnakeCase(key)}:${config[key]}`));
+      } else {
+        throw new Error(`invalid argument: ${key}`)
+      }
+      break;
+    }
+    case 'REPLCONF': {
+      const key = tokens[4];
+      const value = tokens[6]; // do nothing for now
+      if(key === 'listening-port' || key === 'capa') {
+        write(connection, Encoder.encodeValue(new SimpleString('OK')));
+      }
+      break;
+    }
+    case 'PSYNC': {
+      write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
+      write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+      // Handshake finished, assume RDB File was processed correctly
+      replicaConnections.push(connection);
+      break;
+    }
+    default:
+      console.error('unknown command', command);
+      break;
+  }
+}
+
 function receiveCommands(connection: net.Socket) {
   connection.on('data', (stream) => {
-    const tokens = stream.toString().split('\r\n');
-    console.debug(`>> ${stream.toString()}`);
-    if (tokens.length === 0) {
-      return;
-    }
-    const command = tokens[2]?.toUpperCase() ?? '';
-    if(command === 'SET') forwardWrite(stream);
-    switch (command) {
-      case 'PING':
-        write(connection, Encoder.encodeValue(new SimpleString('PONG')));
-        break;
-      case 'ECHO': {
-        const arg1 = tokens[4];
-        write(connection, Encoder.encodeValue(arg1));
-        break;
-      }
-      case 'SET': {
-        const key = tokens[4];
-        const value = tokens[6];
-        const opts = tokens[8] ?? '';
-        const expirationTime = tokens[10];
-        const options = opts.toUpperCase() === "PX" ? { expiresInMilliseconds: Number(expirationTime) } : {};
-        Database.set(key, value, options)
-        write(connection, Encoder.encodeValue(new SimpleString('OK')));
-        break;
-      }
-      case 'GET': {
-        const key = tokens[4];
-        const value = Database.get(key);
-        write(connection, Encoder.encodeValue(value))
-        break;
-      }
-      case 'CONFIG': {
-        const command = Utils.safeUppercase(tokens[4]);
-        if(command !== "GET") return;
-        const valueToGet = tokens[6];
-        if(valueToGet === 'dir') {
-          write(connection, Encoder.encodeValue(['dir', Config.get().rdbFileDir]));
-        } else if(valueToGet === 'dbfilename') {
-          write(connection, Encoder.encodeValue(['dbfilename', Config.get().dbFileName]));
-        }
-        break;
-      }
-      case 'KEYS': {
-        const key = tokens[4];
-        if (key == "*") {
-          write(connection, Encoder.encodeValue(Database.keys()))
-        }
-        break;
-      }
-      case 'INFO': {
-        const key = tokens[4];
-        if(key === undefined) {
-          const configInfo = Config.infoConfigKeys().map(k => `${Utils.camelToSnakeCase(k)}:${config[k]}`)
-          write(connection, Encoder.encodeValue(new BulkString(configInfo)));
-        } else if(key === "replication") {
-          const info = Object.entries(Config.getReplicationInfo()).map(([k, v]: [k: string, v: unknown]) => 
-            `${Utils.camelToSnakeCase(k)}:${v}`
-          )
-          write(connection, Encoder.encodeValue(new BulkString(info)));
-        } else if(Config.isInfoConfigKey(key)) {
-          write(connection, Encoder.encodeValue(`${Utils.camelToSnakeCase(key)}:${config[key]}`));
-        } else {
-          throw new Error(`invalid argument: ${key}`)
-        }
-        break;
-      }
-      case 'REPLCONF': {
-        const key = tokens[4];
-        const value = tokens[6]; // do nothing for now
-        if(key === 'listening-port' || key === 'capa') {
-          write(connection, Encoder.encodeValue(new SimpleString('OK')));
-        }
-        break;
-      }
-      case 'PSYNC': {
-        write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
-        write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
-        // Handshake finished, assume RDB File was processed correctly
-        replicaConnections.push(connection);
-        break;
-      }
-      default:
-        console.error('unknown command', command);
-        break;
-    }
+    processCommand(stream, connection);
   })
 }
 
@@ -127,5 +131,7 @@ net
     console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
   });
   await performHandshake(master, config);
-  receiveCommands(master);
+  master.on('data', (stream) => {
+    stream.
+  })
 })
