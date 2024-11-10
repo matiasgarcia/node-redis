@@ -19,14 +19,6 @@ export function encodeValue(value: unknown): string {
     return `$${data.length}\r\n${data}\r\n`;
   }
 
-  if(value instanceof Buffer) {
-    let binaryString = '';
-    value.forEach(byte => {
-        binaryString += byte.toString(2).padStart(8, '0');
-    });
-    return `$${binaryString.length}\r\n${binaryString}`;
-  }
-
   if(typeof value === 'string') {
     return encodeValue(new BulkString([value]));
   }

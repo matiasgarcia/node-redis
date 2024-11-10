@@ -15,7 +15,7 @@ Database.load(rdb.db)
 
 console.debug('Loaded database', rdb.db)
 
-function write(socket: net.Socket, val: string) {
+function write(socket: net.Socket, val: Buffer | string) {
   console.debug(`<< ${val}`)
   socket.write(val);
 }
@@ -98,7 +98,8 @@ function receiveCommands(connection: net.Socket) {
       }
       case 'PSYNC': {
         write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
-        write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+        const res = Buffer.concat([Buffer.from(`$${EMPTY_RDB_FILE.length}\r\n`), EMPTY_RDB_FILE]);
+        write(connection, res);
         break;
       }
       default:
