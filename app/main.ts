@@ -126,6 +126,6 @@ net
   const master = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
     console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
   });
-  await performHandshake(master, config);
   receiveCommands(master);
+  await performHandshake(master, config);
 })
