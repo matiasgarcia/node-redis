@@ -1,7 +1,7 @@
 import { BulkString } from "./bulkString.js";
 import { SimpleString } from "./simpleString.js";
 
-export function encodeValue(value: unknown): string {
+export function encodeValue(value: unknown): string | Buffer {
   if(value === undefined || value === null) {
     return `$-1\r\n`
   }
@@ -19,16 +19,12 @@ export function encodeValue(value: unknown): string {
     return `$${data.length}\r\n${data}\r\n`;
   }
 
-  if(value instanceof Buffer) {
-    let binaryString = '';
-    value.forEach(byte => {
-        binaryString += byte.toString(2).padStart(8, '0');
-    });
-    return `$${binaryString.length}\r\n${binaryString}`;
-  }
-
   if(typeof value === 'string') {
     return encodeValue(new BulkString([value]));
+  }
+
+  if(value instanceof Buffer) {
+    return Buffer.concat([Buffer.from(`$${value.length}\r\n`), value]);
   }
 
   throw new Error(`Cannot encode value: ${value}`)

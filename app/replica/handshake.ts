@@ -5,7 +5,7 @@ import { SimpleString } from '../simpleString.js';
 
 const HANDSHAKE_TIMEOUT = 30000;
 
-function write(socket: net.Socket, val: string) {
+function write(socket: net.Socket, val: string | Buffer) {
   console.debug(`<< ${val}`)
   socket.write(val);
 }
