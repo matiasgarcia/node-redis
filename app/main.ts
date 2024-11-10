@@ -6,6 +6,7 @@ import * as Config from './config.js';
 import * as Rdb from './rdb.js';
 import { BulkString } from './bulkString.js';
 import { SimpleString } from './simpleString.js';
+import { performHandshake } from './replica/handshake.js';
 
 const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
@@ -101,39 +102,6 @@ function receiveCommands(connection: net.Socket) {
   })
 }
 
-function handShakeWithMaster(client: net.Socket) {
-  const handShakeTimeout = 30000;
-  let timeoutId = setTimeout(() => {
-      throw new Error('Handshake failed');
-  }, handShakeTimeout)
-
-  client.on('connect', () => {
-    write(client, Encoder.encodeValue(['PING']));
-
-    client.once('data', (stream) => {
-      console.debug(`>> ${stream.toString()}`);
-      Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('PONG')), 'Expected PONG during handshake');
-      write(client, Encoder.encodeValue(['REPLCONF', 'listening-port', config.port.toString()]));
-
-      client.once('data', (stream) => {
-        console.debug(`>> ${stream.toString()}`);
-        Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
-        write(client, Encoder.encodeValue(['REPLCONF', 'capa', 'psync2']));
-
-        client.once('data', (stream) => {
-          console.debug(`>> ${stream.toString()}`);
-          Utils.invariant(stream.toString() === Encoder.encodeValue(new SimpleString('OK')), 'Expected OK during handshake');
-          clearTimeout(timeoutId);
-
-          client.on('data', (stream) => {
-            console.debug(`>> ${stream.toString()}`);
-          })
-        })
-      })
-    })
-  })
-}
-
 const server = net
 .createServer((connection) => receiveCommands(connection))
 .listen(config.port, "127.0.0.1")
@@ -143,5 +111,5 @@ const server = net
   const client = net.createConnection({ host: config.master.host, port: config.master.port }, () => {
     console.debug(`Connected to master on ${config.master.host}:${config.master.port}`);
   });
-  handShakeWithMaster(client);
+  performHandshake(client, config);
 })
