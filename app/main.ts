@@ -16,7 +16,7 @@ Database.load(rdb.db)
 console.debug('Loaded database', rdb.db)
 
 function write(socket: net.Socket, val: Buffer | string) {
-  console.debug(`<< ${val}`)
+  console.debug(`<< ${typeof val === 'string' ? JSON.stringify(val) : val}`);
   socket.write(val);
 }
 
@@ -29,7 +29,7 @@ function forwardWrite(val: Buffer | string) {
 function receiveCommands(connection: net.Socket) {
   connection.on('data', (stream) => {
     const tokens = stream.toString().split('\r\n');
-    console.debug(`>> ${stream.toString()}`);
+    console.debug(`>> ${JSON.stringify(stream.toString())}`);
     if (tokens.length === 0) {
       return;
     }
