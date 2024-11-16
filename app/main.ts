@@ -16,16 +16,15 @@ Database.load(rdb.db)
 console.debug('Loaded database', rdb.db)
 
 function write(socket: net.Socket, val: Buffer | string) {
-  console.debug(`<< ${typeof val === 'string' ? JSON.stringify(val) : val}`);
+  console.debug(`<< ${Utils.loggableBuffer(val)}`);
   socket.write(val);
 }
 
 let replicaConnections: net.Socket[] = [];
 
 function forwardWrite(val: Buffer | string) {
-  console.log(replicaConnections.length);
   replicaConnections.forEach((replicaConnection) => {
-    console.debug(`<<[fwd] ${typeof val === 'string' ? JSON.stringify(val) : val}`);
+    console.debug(`<<[fwd]${[replicaConnection.remoteAddress, replicaConnection.remotePort]} ${Utils.loggableBuffer(val)}`);
     replicaConnection.write(val);
   })
 }
@@ -65,7 +64,7 @@ function scanCommands(stream: Buffer) {
 
 function processCommand(stream: string, connection: net.Socket) {
   const tokens = stream.split(CRLF_TERMINATOR);
-  console.debug(`>> ${JSON.stringify(stream.toString())}`);
+  console.debug(`>> ${Utils.loggableBuffer(stream)}`);
   if (tokens.length === 0) {
     return;
   }
