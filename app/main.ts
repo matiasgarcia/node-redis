@@ -9,6 +9,7 @@ import { SimpleString } from './simpleString.js';
 import { performHandshake } from './replica/handshake.js';
 import { CRLF_TERMINATOR, EMPTY_RDB_FILE } from './const.js';
 
+const host = '127.0.0.1';
 const config = Config.loadConfiguration(process.argv.slice(2, process.argv.length))
 const rdb = Rdb.readRdbFile(config.rdbFileDir, config.dbFileName);
 Database.load(rdb.db)
@@ -16,16 +17,15 @@ Database.load(rdb.db)
 console.debug('Loaded database', rdb.db)
 
 function write(socket: net.Socket, val: Buffer | string) {
-  console.debug(`<< ${typeof val === 'string' ? JSON.stringify(val) : val}`);
+  console.debug(`<< ${Utils.loggableBuffer(val)}`);
   socket.write(val);
 }
 
 let replicaConnections: net.Socket[] = [];
 
 function forwardWrite(val: Buffer | string) {
-  console.log(replicaConnections.length);
   replicaConnections.forEach((replicaConnection) => {
-    console.debug(`<<[fwd] ${typeof val === 'string' ? JSON.stringify(val) : val}`);
+    console.debug(`<<[fwd][${[replicaConnection.remoteAddress, replicaConnection.remotePort].join(':')}] ${Utils.loggableBuffer(val)}`);
     replicaConnection.write(val);
   })
 }
@@ -65,7 +65,7 @@ function scanCommands(stream: Buffer) {
 
 function processCommand(stream: string, connection: net.Socket) {
   const tokens = stream.split(CRLF_TERMINATOR);
-  console.debug(`>> ${JSON.stringify(stream.toString())}`);
+  console.debug(`>>[${host}:${config.port}] ${Utils.loggableBuffer(stream)}`);
   if (tokens.length === 0) {
     return;
   }
@@ -162,7 +162,7 @@ function receiveCommands(connection: net.Socket) {
 
 net
 .createServer((connection) => receiveCommands(connection))
-.listen(config.port, "127.0.0.1")
+.listen(config.port, host)
 .on('listening', async () => {
   console.debug(`Listening on port ${config.port} as ${config.role}`)
   if(config.role !== 'slave') return;
