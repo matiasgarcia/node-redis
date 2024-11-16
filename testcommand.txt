@@ -1,0 +1,4 @@
+SET foo 203
+SET test 1000
+GET test
+GET foo
