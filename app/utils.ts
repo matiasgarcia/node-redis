@@ -18,3 +18,7 @@ export function invariant(condition: boolean, errMsg: string): asserts condition
 }
 
 export const camelToSnakeCase = (str: string) => str.replace(/[A-Z]/g, (letter: string) => `_${letter.toLowerCase()}`);
+
+export function loggableBuffer(val: Buffer | string) {
+  return typeof val === 'string' ? JSON.stringify(val.replaceAll('\r\n', ' ')) : val;
+}
