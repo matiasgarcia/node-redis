@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "test": "node --import tsx --test ./app/**/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.8.6",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   },
   "node": ">=21.0.0"
