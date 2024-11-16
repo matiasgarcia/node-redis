@@ -30,7 +30,7 @@ function forwardWrite(val: Buffer | string) {
   })
 }
 
-function collectCommands(stream: Buffer) {
+export function collectCommands(stream: Buffer) {
   const firstByte = stream.at(0);
   if(!firstByte) throw new Error('no firstByte');
   const firstByteIdentifier = String.fromCharCode(firstByte);
@@ -39,15 +39,15 @@ function collectCommands(stream: Buffer) {
     case '$':
       return [stream.toString()];
     case '*':
-      return scanCommands(stream).map(c => c.join(CRLF_TERMINATOR));
+      return scanCommands(stream);
     default:
       throw new Error(`Unexpected format: ${firstByte} ${firstByteIdentifier}`);
   }
 }
 
-function scanCommands(stream: Buffer) {
+function scanCommands(stream: Buffer): Array<string> {
   const chunks = stream.toString().split(CRLF_TERMINATOR);
-  const commands: Array<Array<string>> = [];
+  const commands: Array<string> = [];
   for(let i = 0; i < chunks.length;) {
     const element = chunks[i];
     if(!element) { return commands }
@@ -56,7 +56,8 @@ function scanCommands(stream: Buffer) {
     const amountOfElementsToCollect = length * 2; // each element has its two first bytes that indicate the type of value
     const endIndex = i + amountOfElementsToCollect + 1
     const elementsToCollect = chunks.slice(i, endIndex);
-    commands.push(elementsToCollect);
+    commands.push(`${elementsToCollect.join(CRLF_TERMINATOR)}${CRLF_TERMINATOR}`);
+    console.log(JSON.stringify(`${elementsToCollect.join(CRLF_TERMINATOR)}${CRLF_TERMINATOR}`));
     i = endIndex;
   }
 
