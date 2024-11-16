@@ -1,12 +1,13 @@
 import net from 'net';
 import * as Encoder from '../encoder.js';
 import * as Config from '../config.js';
+import * as Utils from '../utils.js';
 import { SimpleString } from '../simpleString.js';
 
 const HANDSHAKE_TIMEOUT = 30000;
 
 function write(socket: net.Socket, val: string | Buffer) {
-  console.debug(`<< ${typeof val === 'string' ? JSON.stringify(val) : val}`);
+  console.debug(`<< ${Utils.loggableBuffer(val)}`);
   socket.write(val);
 }
 
