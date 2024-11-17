@@ -99,25 +99,40 @@ function processCommand(stream: string, connection: net.Socket) {
       }
       break;
     }
+    default:
+      const masterHandled = masterOnlyCommands(tokens, connection);
+      if(masterHandled) return;
+      const replicaHandled = replicaOnlyCommands(tokens, connection);
+      if(replicaHandled) return;
+      console.error('unknown command', command);
+      break;
+  }
+}
+
+function replicaOnlyCommands(stream: string[], connection: net.Socket): boolean {
+  return false;
+}
+
+function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+  const command = tokens[2]?.toUpperCase() ?? '';
+  switch(command) {
+    case 'PSYNC': {
+      write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
+      write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+      // Handshake finished, assume RDB File was processed correctly
+      replicaConnections.push(connection);
+      return true;
+    }
     case 'REPLCONF': {
       const key = tokens[4];
       const value = tokens[6]; // do nothing for now
       if(key === 'listening-port' || key === 'capa') {
         write(connection, Encoder.encodeValue(new SimpleString('OK')));
+        return true;
       }
-      break;
-    }
-    case 'PSYNC': {
-      write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
-      write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
-      // Handshake finished, assume RDB File was processed correctly
-      console.log('push');
-      replicaConnections.push(connection);
-      break;
     }
     default:
-      console.error('unknown command', command);
-      break;
+      return false;
   }
 }
 
