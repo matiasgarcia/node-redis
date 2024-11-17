@@ -31,6 +31,35 @@ function forwardWrite(val: Buffer | string) {
   })
 }
 
+function replicaOnlyCommands(stream: string[], connection: net.Socket): boolean {
+  if(config.role !== 'slave') return false;
+  return false;
+}
+
+function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+  if(config.role !== 'master') return false;
+  const command = tokens[2]?.toUpperCase() ?? '';
+  switch(command) {
+    case 'PSYNC': {
+      write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
+      write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
+      // Handshake finished, assume RDB File was processed correctly
+      replicaConnections.push(connection);
+      return true;
+    }
+    case 'REPLCONF': {
+      const key = tokens[4];
+      const value = tokens[6]; // do nothing for now
+      if(key === 'listening-port' || key === 'capa') {
+        write(connection, Encoder.encodeValue(new SimpleString('OK')));
+        return true;
+      }
+    }
+    default:
+      return false;
+  }
+}
+
 function processCommand(stream: string, connection: net.Socket) {
   const tokens = stream.split(CRLF_TERMINATOR);
   console.debug(`>>[${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${Utils.loggableBuffer(stream)}`);
@@ -99,23 +128,11 @@ function processCommand(stream: string, connection: net.Socket) {
       }
       break;
     }
-    case 'REPLCONF': {
-      const key = tokens[4];
-      const value = tokens[6]; // do nothing for now
-      if(key === 'listening-port' || key === 'capa') {
-        write(connection, Encoder.encodeValue(new SimpleString('OK')));
-      }
-      break;
-    }
-    case 'PSYNC': {
-      write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
-      write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
-      // Handshake finished, assume RDB File was processed correctly
-      console.log('push');
-      replicaConnections.push(connection);
-      break;
-    }
     default:
+      const masterHandled = masterOnlyCommands(tokens, connection);
+      if(masterHandled) return;
+      const replicaHandled = replicaOnlyCommands(tokens, connection);
+      if(replicaHandled) return;
       console.error('unknown command', command);
       break;
   }
