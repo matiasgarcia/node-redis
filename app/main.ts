@@ -102,29 +102,39 @@ function processCommand(stream: string, connection: net.Socket) {
     case 'REPLCONF': {
       const key = tokens[4];
       const value = tokens[6]; // do nothing for now
-      if(key === 'listening-port' || key === 'capa') {
-        write(connection, Encoder.encodeValue(new SimpleString('OK')));
+      console.log(`>> [${config.role}][${connection.remoteAddress}:${connection.remotePort}] recv ${Utils.loggableBuffer(stream)}`);
+      switch(key) {
+        case 'listening-port':
+          case 'capa':
+            write(connection, Encoder.encodeValue(new SimpleString('OK')));
+            return;
+        case 'GETACK':
+          write(connection, Encoder.encodeValue(['REPLCONF', 'ACK', '0']));
+          return;
       }
-      break;
     }
     case 'PSYNC': {
       write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
       write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
       // Handshake finished, assume RDB File was processed correctly
-      console.log('push');
       replicaConnections.push(connection);
       break;
     }
     default:
-      console.error('unknown command', command);
+      console.error(`>>(ERR) [${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${Utils.loggableBuffer(stream)}`);
       break;
   }
 }
 
 function receiveCommands(connection: net.Socket) {
   connection.on('data', (stream) => {
-    const commands = collectCommands(stream);
-    commands.forEach(c => processCommand(c, connection))
+    try {
+      const commands = collectCommands(stream);
+      commands.forEach(c => processCommand(c, connection))
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   })
 }
 
