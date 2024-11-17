@@ -32,10 +32,12 @@ function forwardWrite(val: Buffer | string) {
 }
 
 function replicaOnlyCommands(stream: string[], connection: net.Socket): boolean {
+  if(config.role !== 'slave') return false;
   return false;
 }
 
 function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+  if(config.role !== 'master') return false;
   const command = tokens[2]?.toUpperCase() ?? '';
   switch(command) {
     case 'PSYNC': {
