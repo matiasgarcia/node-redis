@@ -115,6 +115,13 @@ function processCommand(stream: string, connection: net.Socket) {
       replicaConnections.push(connection);
       break;
     }
+    case 'REPLCONF': {
+      const key = tokens[4];
+      Utils.invariant(key !== 'GETACK', 'second arg must be ACK');
+      const offset = tokens[6];
+      Utils.invariant(key !== '*', 'third arg must be *');
+      write(connection, Encoder.encodeValue(['REPLCONF', 'ACK', 0]));
+    }
     default:
       console.error('unknown command', command);
       break;
