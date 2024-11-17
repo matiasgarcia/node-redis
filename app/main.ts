@@ -31,8 +31,19 @@ function forwardWrite(val: Buffer | string) {
   })
 }
 
-function replicaOnlyCommands(stream: string[], connection: net.Socket): boolean {
-  return false;
+function replicaOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+  const command = tokens[2]?.toUpperCase() ?? '';
+  switch(command) {
+    case 'REPLCONF': {
+      const key = tokens[4];
+      if(key === 'GETACK') {
+        write(connection, Encoder.encodeValue(['REPLCONF', 'ACK', '0']));
+        return true;
+      }
+    }
+    default:
+      return false;
+  }
 }
 
 function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
