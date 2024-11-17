@@ -31,6 +31,14 @@ function forwardWrite(val: Buffer | string) {
   })
 }
 
+function processReplicaOnlyCommands(stream: string, connection: net.Socket) {
+  const tokens = stream.split(CRLF_TERMINATOR);
+  const command = tokens[2]?.toUpperCase() ?? '';
+  switch(command) {
+
+  }
+}
+
 function processCommand(stream: string, connection: net.Socket) {
   const tokens = stream.split(CRLF_TERMINATOR);
   console.debug(`>>[${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${Utils.loggableBuffer(stream)}`);
@@ -102,21 +110,25 @@ function processCommand(stream: string, connection: net.Socket) {
     case 'REPLCONF': {
       const key = tokens[4];
       const value = tokens[6]; // do nothing for now
-      if(key === 'listening-port' || key === 'capa') {
-        write(connection, Encoder.encodeValue(new SimpleString('OK')));
+      switch(key) {
+        case 'listening-port':
+          case 'capa':
+            write(connection, Encoder.encodeValue(new SimpleString('OK')));
+            return;
+        case 'GETACK':
+          write(connection, Encoder.encodeValue(['REPLCONF', 'ACK', 0]));
+          return;
       }
-      break;
     }
     case 'PSYNC': {
       write(connection, Encoder.encodeValue(new SimpleString(`FULLRESYNC ${config.masterReplid} ${config.masterReplOffset}`)));
       write(connection, Encoder.encodeValue(EMPTY_RDB_FILE));
       // Handshake finished, assume RDB File was processed correctly
-      console.log('push');
       replicaConnections.push(connection);
       break;
     }
     default:
-      console.error('unknown command', command);
+      console.error(`>>[${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${JSON.stringify(stream)}`);
       break;
   }
 }
