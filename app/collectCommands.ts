@@ -2,9 +2,6 @@ import { CRLF_TERMINATOR, EMPTY_RDB_FILE } from './const.js';
 import { invariant } from './utils.js';
 
 export function collectCommands(stream: Buffer) {
-  const firstByte = stream.at(0);
-  if(!firstByte) throw new Error('no firstByte');
-  const firstByteIdentifier = String.fromCharCode(firstByte);
   return scanCommands2(stream);
 }
 
@@ -18,13 +15,10 @@ export function scanCommands2(stream: Buffer): Array<Buffer> {
     switch(String.fromCharCode(byte)) {
       case '+': {
         const startOfCLRF = stream.indexOf(CRLF_TERMINATOR, i);
-        if(startOfCLRF !== -1) {
-          const endOfCommandIndex = startOfCLRF + 1;
-          commands.push(stream.subarray(i, endOfCommandIndex + 1));
-          i = endOfCommandIndex + 1;
-        } else {
-          throw new Error('Unknown...');
-        }
+        if (startOfCLRF === -1) throw new Error('Missing CRLF for + command.');
+          const endOfCommandIndex = startOfCLRF + 2;
+          commands.push(stream.subarray(i, endOfCommandIndex));
+          i = endOfCommandIndex;
         break;
       }
       case '$': {
@@ -61,10 +55,11 @@ export function scanCommands2(stream: Buffer): Array<Buffer> {
 
         const arrayCommands = scanCommands2(stream.subarray(endOfLengthIndex));
 
-        commands = commands.concat(arrayCommands);
-        const commandsByteSize = arrayCommands.reduce((acc, curr) => acc + curr.byteLength, 0);
-        const commandByteSize = 1 + encodedArrayLength.length + CRLF_TERMINATOR.length + commandsByteSize;
-        i += commandByteSize
+        const arraySize = arrayCommands.reduce((acc, cmd) => acc + cmd.byteLength, 0);
+        const totalCommandLength = 1 + encodedArrayLength.length + 2 + arraySize; // * + length + CRLF + content
+
+        commands.push(stream.subarray(i, i + totalCommandLength));
+        i += totalCommandLength;
         break;
       }
       default:

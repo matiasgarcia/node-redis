@@ -71,8 +71,8 @@ function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
   }
 }
 
-function processCommand(stream: string, connection: net.Socket) {
-  const tokens = stream.split(CRLF_TERMINATOR);
+function processCommand(stream: Buffer, connection: net.Socket) {
+  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
   console.debug(`>>[${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${Utils.loggableBuffer(stream)}`);
   if (tokens.length === 0) {
     return;
