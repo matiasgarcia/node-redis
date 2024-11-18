@@ -8,8 +8,8 @@ describe('#collectCommands', () => {
       Buffer.from("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n")
     )
     assert.deepEqual(result.length, 2);
-    assert.deepEqual(result[0], Buffer.from('*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n'));
-    assert.deepEqual(result[1], Buffer.from('*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n'));
+    assert.deepEqual(result[0], Buffer.from("*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n"));
+    assert.deepEqual(result[1], Buffer.from("*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n"));
   });
 
   it('should parse single command', () => {
@@ -29,8 +29,7 @@ describe('#collectCommands', () => {
 
   it('parses RESP arrays', () => {
     const result = collectCommands(Buffer.from("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"));
-    assert.equal(result.length, 2);
-    assert.deepEqual(result[0], Buffer.from("$5\r\nhello\r\n"));
-    assert.deepEqual(result[1], Buffer.from("$5\r\nworld\r\n"));
+    assert.equal(result.length, 1);
+    assert.deepEqual(result[0], Buffer.from("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"));
   })
 });
