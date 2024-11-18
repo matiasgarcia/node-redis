@@ -31,7 +31,8 @@ function forwardWrite(val: Buffer | string) {
   })
 }
 
-function replicaOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+function replicaOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
+  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
   if(config.role !== 'slave') return false;
   const command = tokens[2]?.toUpperCase() ?? '';
   switch(command) {
@@ -43,11 +44,15 @@ function replicaOnlyCommands(tokens: string[], connection: net.Socket): boolean 
       }
     }
     default:
+      if(stream.toString('utf-8').startsWith('+FULLRESYNC')) {
+        return true;
+      }
       return false;
   }
 }
 
-function masterOnlyCommands(tokens: string[], connection: net.Socket): boolean {
+function masterOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
+  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
   if(config.role !== 'master') return false;
   const command = tokens[2]?.toUpperCase() ?? '';
   switch(command) {
@@ -140,9 +145,9 @@ function processCommand(stream: Buffer, connection: net.Socket) {
       break;
     }
     default:
-      const masterHandled = masterOnlyCommands(tokens, connection);
+      const masterHandled = masterOnlyCommands(stream, connection);
       if(masterHandled) return;
-      const replicaHandled = replicaOnlyCommands(tokens, connection);
+      const replicaHandled = replicaOnlyCommands(stream, connection);
       if(replicaHandled) return;
       console.error('unknown command', command);
       break;
