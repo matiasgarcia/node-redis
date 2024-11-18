@@ -51,7 +51,7 @@ export function collectCommands(stream: Buffer): Array<Buffer> {
         let commandByteSize = 1 + encodedArrayLength.length + 2; // * + length + CRLF
         let subIndex = startOfLength + 2; // Start parsing the array content
         for (let j = 0; j < arrayLength; j++) {
-          const subCommands = scanCommands2(stream.subarray(subIndex));
+          const subCommands = collectCommands(stream.subarray(subIndex));
           const subCommand = subCommands[0]; // Parse one subcommand at a time
           commandByteSize += subCommand.byteLength;
           subIndex += subCommand.byteLength;
