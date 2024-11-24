@@ -94,10 +94,14 @@ export function readRdbFile(rdbFileDir: string | undefined, dbFileName: string |
   if (!fs.existsSync(pathToFile)) {
     return EMPTY_RDB;
   }
-
+  
   const rdb = fs.readFileSync(pathToFile);
+  return readRdb(rdb);
+}
+
+export function readRdb(rdb: Buffer) {
   const version = rdb.subarray(0, 9).toString();
-  if(version !== 'REDIS0011') throw new Error('Unexpected redis version');
+  if(version !== 'REDIS0011' && version !== 'REDIS0012') throw new Error(`Unexpected redis version ${version}`);
   if(rdb[8] === METADATA_START) throw new Error('Missing metadata section');
   const databaseSectionStart = rdb.findIndex(value => value === DATABASE_SECTION_START);
   const metadataBuffer = rdb.subarray(9, databaseSectionStart);
