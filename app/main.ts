@@ -32,7 +32,7 @@ function forwardWrite(val: Buffer | string) {
 }
 
 function replicaOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
-  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
+  const tokens = stream.toString('ascii').split(CRLF_TERMINATOR);
   if(config.role !== 'slave') return false;
   const command = tokens[2]?.toUpperCase() ?? '';
   switch(command) {
@@ -44,7 +44,7 @@ function replicaOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
       }
     }
     default:
-      if(stream.toString('utf-8').startsWith('+FULLRESYNC')) {
+      if(stream.toString('ascii').startsWith('+FULLRESYNC')) {
         return true;
       }
       const terminatorIndex = stream.indexOf(Buffer.from(CRLF_TERMINATOR));
@@ -55,7 +55,7 @@ function replicaOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
 }
 
 function masterOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
-  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
+  const tokens = stream.toString('ascii').split(CRLF_TERMINATOR);
   if(config.role !== 'master') return false;
   const command = tokens[2]?.toUpperCase() ?? '';
   switch(command) {
@@ -80,7 +80,7 @@ function masterOnlyCommands(stream: Buffer, connection: net.Socket): boolean {
 }
 
 function processCommand(stream: Buffer, connection: net.Socket) {
-  const tokens = stream.toString('utf-8').split(CRLF_TERMINATOR);
+  const tokens = stream.toString('ascii').split(CRLF_TERMINATOR);
   console.debug(`>>[${config.role}][${connection.remoteAddress}:${connection.remotePort}] ${Utils.loggableBuffer(stream)}`);
   if (tokens.length === 0) {
     return;
